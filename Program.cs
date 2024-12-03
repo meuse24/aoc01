@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Data.SqlTypes;
+using System.Diagnostics;
 
 namespace aoc01
 {
@@ -7,169 +8,233 @@ namespace aoc01
         static void Main(string[] args)
         {
 
-            Console.WriteLine(day01());
+            Console.WriteLine(SolveDay01());
+            Console.WriteLine(SolveDay02());
+            Console.WriteLine(SolveDay03());
 
-            Console.WriteLine(day02());
-
-            string day02()
+            string SolveDay03()
             {
-                var lines = getListOfDay("2");
-                string result = "Day 2\n";
+                var inputLines = GetListOfDay("3");
+                string resultText = "Day 3\n";
                 Stopwatch stopwatch = new();
 
-                // Day 2, Part 1
+                // Part 1: 
                 stopwatch.Start();
-                int counter = 0;
-                int error = 0;
-                foreach (var line in lines)
+                string concatenatedString = string.Join("", inputLines); // Vereine alle Eingabedaten zu einem großen String
+                List<string> mulParts = new List<string>(concatenatedString.Split("mul(")); // Teile den String an den Trennzeichen
+
+                long sum = 0;
+                foreach (string part in mulParts)
                 {
-                    List<int> numbers = line
-                        .Split(' ') // Teile den String bei Leerzeichen
-                        .Select(int.Parse) // Konvertiere jeden Teil in eine Ganzzahl
-                        .ToList(); // Erstelle eine Liste aus den Ergebnissen
-                    if (IsListSafe(numbers, error, 0)) counter++;
+                    int closingBracketIndex = part.IndexOf(')');
+                    if (closingBracketIndex != -1)
+                    {
+                        string substring = part.Substring(0, closingBracketIndex); // Extrahiere Teilstring vor der schließenden Klammer
+                        if (IsValidString(substring)) sum += multiNumbers(substring); // Berechne das Produkt und addiere es zur Summe   
+                    }
                 }
                 stopwatch.Stop();
-                result += $"Part 1: {counter}, {stopwatch.ElapsedMilliseconds} ms\n";
+                resultText += $"Part 1: {sum}, {stopwatch.ElapsedMilliseconds} ms\n";
 
-                // Day 2, Part 2
+                // Part 2: 
                 stopwatch.Restart();
-                error = 0;
-                counter = 0;
-                foreach (var line in lines)
+                sum = 0;
+                bool enabled = true;
+                foreach (string part in mulParts)
                 {
-                    List<int> numbers = line
-                        .Split(' ') // Teile den String bei Leerzeichen
-                        .Select(int.Parse) // Konvertiere jeden Teil in eine Ganzzahl
-                        .ToList(); // Erstelle eine Liste aus den Ergebnissen
-                    if (IsListSafe(numbers, error, 1)) counter++;
+                    int closingBracketIndex = part.IndexOf(')');
+                    if (closingBracketIndex != -1)
+                    {
+                        string substring = part.Substring(0, closingBracketIndex); // Extrahiere Teilstring vor der schließenden Klammer
+                        if (IsValidString(substring) && enabled) sum += multiNumbers(substring); // Berechne das Produkt und addiere es zur Summe   
+                        if (part.Contains("do()")) enabled = true;
+                        if (part.Contains("don't()")) enabled = false;
+                    }
                 }
                 stopwatch.Stop();
-                result += $"Part 2: {counter}, {stopwatch.ElapsedMilliseconds} ms\n";
-
-                return result;
-
+                resultText += $"Part 2: {sum}, {stopwatch.ElapsedMilliseconds} ms\n";
+                return resultText;
+            }
+            long multiNumbers(string str)
+            {
+                var numbers = str.Split(","); // Teile den String bei dem Komma
+                return int.Parse(numbers[0]) * int.Parse(numbers[1]); // Berechne das Produkt und gib es zurück
             }
 
-            static bool IsListSafe(List<int> numbers, int currentErrors, int maxErrors)
+            static bool IsValidString(string input)
             {
-                // 1. Bedingung: Liste prüfen (aufsteigend/absteigend und Nachbar-Differenzen)
-                if ((IsAscending(numbers) || IsDescending(numbers)) && NeighboursDiffersNotBetween(numbers, 1, 3)) return true;
+                // Überprüfen, ob der String mit einer Ziffer beginnt und endet
+                if (!char.IsDigit(input[0]) || !char.IsDigit(input[input.Length - 1])) { return false; }
 
-                // 2. Fehlerlimit erreicht?
-                if (currentErrors >= maxErrors) return false;
-
-                // 3. Rekursion: Versuche, ein Element zu entfernen und erneut zu prüfen
-                for (int i = 0; i < numbers.Count; i++)
+                int commaCount = 0;
+                foreach (char character in input)// Zähle die Kommas
                 {
-                    var modifiedList = new List<int>(numbers);
-                    modifiedList.RemoveAt(i); // Entferne Element an Position i
-                    if (IsListSafe(modifiedList, currentErrors + 1, maxErrors)) return true;
+                    if (character == ',') commaCount++;
+                    else if (!char.IsDigit(character)) return false; // Der String darf nur Ziffern und genau ein Komma enthalten
                 }
 
-                // 4. Keine Lösung gefunden
+                // Genau ein Komma muss vorhanden sein
+                return commaCount == 1;
+            }
+
+
+
+            string SolveDay02()
+            {
+                var inputLines = GetListOfDay("2");
+                string resultText = "Day 2\n";
+                Stopwatch stopwatch = new();
+
+                // Part 1: Check sequences with no allowed errors
+                stopwatch.Start();
+                int validSequenceCount = 0;
+                int errorCount = 0;
+                foreach (var line in inputLines)
+                {
+                    List<int> sequence = line
+                        .Split(' ')
+                        .Select(int.Parse)
+                        .ToList();
+                    if (IsValidSequence(sequence, errorCount, 0)) validSequenceCount++;
+                }
+                stopwatch.Stop();
+                resultText += $"Part 1: {validSequenceCount}, {stopwatch.ElapsedMilliseconds} ms\n";
+
+                // Part 2: Check sequences with one allowed error
+                stopwatch.Restart();
+                errorCount = 0;
+                validSequenceCount = 0;
+                foreach (var line in inputLines)
+                {
+                    List<int> sequence = line
+                        .Split(' ')
+                        .Select(int.Parse)
+                        .ToList();
+                    if (IsValidSequence(sequence, errorCount, 1)) validSequenceCount++;
+                }
+                stopwatch.Stop();
+                resultText += $"Part 2: {validSequenceCount}, {stopwatch.ElapsedMilliseconds} ms\n";
+                return resultText;
+            }
+
+            static bool IsValidSequence(List<int> sequence, int currentErrorCount, int maxAllowedErrors)
+            {
+                // Check if sequence is monotonic and neighboring differences are valid
+                if ((IsMonotonicallyIncreasing(sequence) || IsMonotonicallyDecreasing(sequence))
+                    && HasValidNeighborDifferences(sequence, 1, 3)) return true;
+
+                // Check if error limit is reached
+                if (currentErrorCount >= maxAllowedErrors) return false;
+
+                // Try removing each element and check if resulting sequence is valid
+                for (int index = 0; index < sequence.Count; index++)
+                {
+                    var modifiedSequence = new List<int>(sequence);
+                    modifiedSequence.RemoveAt(index);
+                    if (IsValidSequence(modifiedSequence, currentErrorCount + 1, maxAllowedErrors)) return true;
+                }
+
                 return false;
             }
 
-            static bool IsAscending(List<int> numbers)
+            static bool IsMonotonicallyIncreasing(List<int> sequence)
             {
-                for (int i = 0; i < numbers.Count - 1; i++) if (numbers[i] > numbers[i + 1]) return false;
-                return true;
-            }
-
-            static bool IsDescending(List<int> numbers)
-            {
-                for (int i = 0; i < numbers.Count - 1; i++) if (numbers[i] < numbers[i + 1]) return false;
-                return true;
-            }
-
-            static bool NeighboursDiffersNotBetween(List<int> numbers, int min, int max)
-            {
-                for (int i = 0; i < numbers.Count - 1; i++)
+                for (int index = 0; index < sequence.Count - 1; index++)
                 {
-                    int diff = Math.Abs(numbers[i] - numbers[i + 1]);
-                    if (diff < min || diff > max) return false;
+                    if (sequence[index] > sequence[index + 1]) return false;
                 }
                 return true;
             }
 
-            static string ListToString(List<int> numbers)
+            static bool IsMonotonicallyDecreasing(List<int> sequence)
             {
-                return string.Join(", ", numbers);
+                for (int index = 0; index < sequence.Count - 1; index++)
+                {
+                    if (sequence[index] < sequence[index + 1]) return false;
+                }
+                return true;
+            }
+
+            static bool HasValidNeighborDifferences(List<int> sequence, int minDifference, int maxDifference)
+            {
+                for (int index = 0; index < sequence.Count - 1; index++)
+                {
+                    int difference = Math.Abs(sequence[index] - sequence[index + 1]);
+                    if (difference < minDifference || difference > maxDifference) return false;
+                }
+                return true;
+            }
+
+            static string ConvertSequenceToString(List<int> sequence)
+            {
+                return string.Join(", ", sequence);
             }
 
 
-            string day01()
+            string SolveDay01()
             {
-                Stopwatch stopwatch = new();
-
-                // Tag 1 Part 1 Günther
-                var lines = getListOfDay("1");
-                string result = "Day 1\n";
+                var stopwatch = new Stopwatch();
+                // Part 1: Calculate differences between left and right numbers
+                var inputLines = GetListOfDay("1");
+                var resultText = "Day 1\n";
                 stopwatch.Start();
 
-                List<int> listLeft = new List<int>();
-                List<int> listRight = new List<int>();
+                var leftNumbers = new List<int>();
+                var rightNumbers = new List<int>();
 
-                foreach (string line in lines)
+                foreach (string line in inputLines)
                 {
-                    listLeft.Add(int.Parse(line.Substring(0, 5)));
-                    listRight.Add(int.Parse(line.Substring(line.Length - 5, 5)));
+                    leftNumbers.Add(int.Parse(line.Substring(0, 5)));
+                    rightNumbers.Add(int.Parse(line.Substring(line.Length - 5, 5)));
                 }
 
-                listLeft.Sort();
-                listRight.Sort();
+                leftNumbers.Sort();
+                rightNumbers.Sort();
 
-                int s = 0;
-                for (int i = 0; i < listLeft.Count; i++)
+                int sumOfDifferences = 0;
+                for (int index = 0; index < leftNumbers.Count; index++)
                 {
-                    s += Math.Abs(listLeft[i] - listRight[i]);
+                    sumOfDifferences += Math.Abs(leftNumbers[index] - rightNumbers[index]);
                 }
                 stopwatch.Stop();
-                result += $"Part 1: {s}, {stopwatch.ElapsedMilliseconds} ms";
+                resultText += $"Part 1: {sumOfDifferences}, {stopwatch.ElapsedMilliseconds} ms";
 
-
-                // Tag 1 Part 2 Günther
-
+                // Part 2: Calculate sum of products of matching numbers
                 stopwatch.Restart();
-
-                s = 0;
-                foreach (int i in listLeft)
+                int totalSum = 0;
+                foreach (int number in leftNumbers)
                 {
-                    s += (i * cnt(i, listRight));
+                    totalSum += (number * CountOccurrences(number, rightNumbers));
                 }
-
                 stopwatch.Stop();
+                resultText += $"\nPart 2: {totalSum}, {stopwatch.ElapsedMilliseconds} ms\n";
+                return resultText;
 
-                result += $"\nPart 2: {s}, {stopwatch.ElapsedMilliseconds} ms";
-
-                return result;
-
-                int cnt(int nr, List<int> list)
+                int CountOccurrences(int numberToFind, List<int> numberList)
                 {
-                    int r = 0;
-                    foreach (int i in list)
+                    int count = 0;
+                    foreach (int currentNumber in numberList)
                     {
-                        if (i == nr) r++;
+                        if (currentNumber == numberToFind) count++;
                     }
-                    return r;
+                    return count;
                 }
             }
 
-            List<string> getListOfDay(string day)
+            static List<string> GetListOfDay(string day)
             {
-                string fileName = $"TextFile{day}.txt";
-                string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                string solutionDirectory = Directory.GetParent(projectDirectory).Parent.Parent.Parent.FullName;
-                string filePath = Path.Combine(solutionDirectory, fileName);
-                return new List<string>(File.ReadAllLines(filePath));
-
+                var directory = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                // Nach oben navigieren bis Projektdatei gefunden
+                while (directory != null && !directory.GetFiles("*.csproj").Any()) directory = directory.Parent;
+                if (directory == null) throw new DirectoryNotFoundException("Projektverzeichnis nicht gefunden");
+                string filePath = Path.Combine(directory.FullName, $"TextFile{day}.txt");
+                if (!File.Exists(filePath)) throw new FileNotFoundException($"Datei TextFile{day}.txt nicht gefunden", filePath);
+                return File.ReadAllLines(filePath).ToList();
             }
         }
-
-
     }
 }
+
 
 
 
